@@ -1,0 +1,9 @@
+{
+  "version": "open31-v2",
+  "min_food_margin": 0.5,
+  "min_dish_margin": 0.35,
+  "min_other_margin": 0.4,
+  "max_generic_gap": 3.0,
+  "flat_image_stddev": 2.0,
+  "notes": "Margins are differences between SigLIP logits, not calibrated probabilities. Conservative heuristic; unknown detection is not guaranteed."
+}
