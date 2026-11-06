@@ -7,7 +7,8 @@ import streamlit as st
 
 from classifier import MODEL_NAME, load_runtime
 from food_catalog import CATALOG_VERSION, DISHES, all_prompts
-from image_input import MAX_FILE_SIZE, UPLOAD_EXTENSIONS, ImageUploadError, open_uploaded_image
+from image_input import (MAX_FILE_SIZE, SUPPORTED_FORMAT_LABEL, ImageUploadError,
+                         decode_uploaded_image)
 from open_set import CONFIG, FoodRecognizer
 
 
@@ -50,22 +51,29 @@ with st.sidebar:
 
 uploaded_file = st.file_uploader(
     "料理画像を選択",
-    type=list(UPLOAD_EXTENSIONS),
-    help="JPG・PNG・HEIC・HEIF、10 MB以下・2500万画素以下の写真を使用してください。HEIC/HEIFは自動で読み込みます。",
+    type=None,  # Do not let a filename/MIME filter reject valid phone exports.
+    max_upload_size=MAX_FILE_SIZE // (1024 * 1024),
+    help=f"{SUPPORTED_FORMAT_LABEL}。20 MiB以下・5000万画素以下。拡張子ではなく実際の内容を確認します。",
 )
+st.caption("対応：" + SUPPORTED_FORMAT_LABEL + "。撮影方向・透明背景を自動調整します。")
+st.caption("大きな写真は長辺2048 px以内へ縮小。アニメーション・複数ページは先頭の1枚、HEIFは主画像のみ使用します。RAW・SVG・PDF・動画は対象外です。")
 
 if uploaded_file is None:
     st.info("画像を選ぶと、ここにプレビューが表示されます。")
 elif uploaded_file.size > MAX_FILE_SIZE:
-    st.error("画像が10 MBを超えています。小さい画像を選んでください。")
+    st.error("画像が20 MiBを超えています。小さい画像を選んでください。")
 else:
     try:
-        image = open_uploaded_image(uploaded_file.getvalue())
+        decoded = decode_uploaded_image(uploaded_file.getvalue())
+        image = decoded.image
     except ImageUploadError as error:
         st.error(str(error))
     else:
         st.image(image, caption=uploaded_file.name, width="stretch")
         st.success("画像を読み込みました。")
+        st.caption(f"検出形式：{decoded.detected_format}｜元画像：{decoded.original_size[0]} × {decoded.original_size[1]} px")
+        if decoded.resized:
+            st.caption("表示・推定用に縮小しました。端末内の元の写真は変更していません。")
         st.write(f"画像サイズ：{image.width} × {image.height} px")
         st.caption(f"{len(DISHES)}種類の料理候補と、料理以外・範囲外の食品候補を比較します。scoreは正解確率ではありません。")
 

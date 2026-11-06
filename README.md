@@ -39,24 +39,37 @@
 
 ## 使い方
 
-1. JPG・PNG・HEIC・HEIFの写真を選択します。10 MiB以下・2500万画素以下に制限しています。
+1. 写真を選択します。JPEG・PNG・HEIC/HEIF・WebP・AVIF・GIF・TIFF・BMP・JPEG 2000に対応します。20 MiB以下・5000万画素以下に制限しています。
 2. 「料理名を推定」を押します。初回はモデルの取得・読み込みに時間がかかります。
 3. 候補名と対応score、または判定保留の理由を確認します。
 
 画面の表示は日本語、比較する候補文は英語です。31種類の範囲は画面の「対象31種類と利用上の注意」で確認できます。
 画像を登録して新しい料理を学習する仕組みではありません。
 
-### スマートフォンのHEIC写真
+### 統一された画像入力（2026年11月6日更新）
 
-HEIC/HEIFは `pillow-heif==1.8.1` で自動的に8 bit RGBへデコードします。
-拡張子をJPGへ変更する必要はありません。複数画像を含むHEIFでは主画像だけを使用し、
-撮影方向を反映してEXIF/GPS・XMP情報をプレビューへ引き継ぎません。
-一般的な4032×3024（約1219万画素）と5712×4284（約2447万画素）の写真は画素数制限内です。
-4800万画素など2500万画素を超える写真や10 MiBを超えるファイルは、先に縮小してください。
-深度画像・補助画像・動画の認識には対応しません。
+選択画面で拡張子・MIMEを制限せず、サーバーで**実際のバイト列**を許可した画像decoderだけに渡します。
+同じ写真がカメラからHEIC、相冊からJPEGとして渡された場合も、拡張子の大文字・小文字や別名に依存しません。
+JFIF/JPE、HIF、TIF、JP2/J2K、拡張子なし・誤った拡張子でも、内容が対応する画像なら読み込みます。
+ファイル名を書き換えて形式変換した扱いにはしません。
 
-入力形式を追加しただけで、候補文・モデル重み・拒否閾値を再学習／調整したものではありません。
-旧写真での正解率をHEIC写真全体の精度として主張しません。
+- JPEG・PNG・WebP・AVIF・GIF・TIFF・BMP/DIB・JPEG 2000は固定したPillowで読み込みます。
+- HEIC/HEIFは固定した `pillow-heif==1.8.1` で主画像を読み込みます。depth/auxiliary画像は使用しません。
+- EXIFの撮影方向を反映し、RGB・CMYK・グレースケール・パレットをRGBへ正規化します。透明部分は白背景へ合成します。
+- 16 bitグレースケールは8 bitへ縮小します。HEIF/AVIFのHDRはdecoderの8 bit変換を使用します。色校正やHDR編集を保証する機能ではありません。
+- アニメーション（GIF/APNG/WebP/AVIF）・複数ページTIFFは先頭の1枚だけを使用します。HEIFは先頭ではなく主画像です。
+- 4032×3024、5712×4284、8064×6048（約4877万画素）は画素数上限内です。長辺2048 pxを超える写真は縦横比を維持して縮小します。
+- 元画像の上限は20 MiB・5000万画素。ヘッダー確認後にdecodeし、同一プロセス内のdecodeを直列化します。codecによっては縮小前に元画像全体をメモリへ展開するため、利用者数に対する無制限の可用性は保証しません。
+- RAW（DNG/ProRAW等）・JPEG XL・SVG・PDF・動画、破損ファイルは対応外です。JPEG/PNGへ実際に書き出してください。外部converterやshellは起動しません。
+- 正規化したプレビューにはEXIF/GPS・XMPを引き継ぎません。端末内の元の写真は変更しません。
+
+形式を広く受け付けることと、料理を正しく認識することは別です。候補文・モデル重み・拒否閾値は変更していません。
+縮小・透明背景の合成・codecの非可逆圧縮でpixel値や推定結果が変わる場合があります。過去の正解率を全形式の精度として主張しません。
+
+実装の根拠：[Pillowの画像形式](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html)、
+[Image.openの形式制限](https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.open)、
+[pillow-heif](https://pillow-heif.readthedocs.io/en/stable/)、
+[Streamlit file_uploader](https://docs.streamlit.io/develop/api-reference/widgets/st.file_uploader)。
 
 ## モデルと判定
 
