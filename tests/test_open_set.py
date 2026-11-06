@@ -1,10 +1,14 @@
+import hashlib
+import json
 import unittest
 
 import torch
 
 from PIL import Image
 
-from food_catalog import DISHES, FOOD_PROMPTS, NON_FOOD_PROMPTS, OTHER_FOOD_PROMPTS, all_prompts
+from food_catalog import (CATALOG_VERSION, CATALOG_GROUPS, DISHES, DRINKS, FRUITS,
+                          ORIGINAL_DISHES, THAI_DISHES, FOOD_PROMPTS,
+                          NON_FOOD_PROMPTS, OTHER_FOOD_PROMPTS, all_prompts)
 from open_set import CONFIG, FoodRecognizer, decide
 
 
@@ -15,11 +19,40 @@ class OpenSetTest(unittest.TestCase):
         scores[len(DISHES)] = 2.
         return scores
 
-    def test_catalogue_is_31_unique_dishes_and_preserves_originals(self):
-        self.assertEqual(len(DISHES), 31)
-        self.assertEqual(len({row[0] for row in DISHES}), 31)
+    def test_catalogue_is_60_unique_candidates_and_preserves_originals(self):
+        self.assertEqual(CATALOG_VERSION, 'open60-v3')
+        self.assertEqual(CONFIG['version'], CATALOG_VERSION)
+        self.assertEqual(len(DISHES), 60)
+        self.assertEqual(len({row[0] for row in DISHES}), 60)
+        self.assertEqual(len(ORIGINAL_DISHES), 31)
+        self.assertEqual(DISHES[:31], ORIGINAL_DISHES)
+        self.assertEqual(hashlib.sha256(json.dumps(ORIGINAL_DISHES, ensure_ascii=False).encode()).hexdigest(),
+                         '265efc7c46d0b389d8463e135e4a29d2beffb40ec761b045be4abc395b6cdaee')
         self.assertEqual([row[0] for row in DISHES[:4]], ['sushi', 'ramen', 'curry_rice', 'fried_rice'])
         self.assertEqual(len(all_prompts('English')), len(all_prompts('日本語')))
+        self.assertEqual(len(all_prompts('English')), 86)
+
+    def test_fruit_drinks_and_thai_groups_are_selectable_not_negative_foods(self):
+        self.assertEqual((len(FRUITS), len(DRINKS), len(THAI_DISHES)), (12, 8, 9))
+        self.assertEqual(sum(len(rows) for _, rows in CATALOG_GROUPS), len(DISHES))
+        self.assertEqual(len(set(all_prompts('English'))), len(all_prompts('English')))
+        self.assertNotIn('fruit', dict(OTHER_FOOD_PROMPTS))
+        self.assertNotIn('drink', dict(OTHER_FOOD_PROMPTS))
+        self.assertIn('a photo of fresh fruit', FOOD_PROMPTS)
+        self.assertIn('a photo of a drink in a glass or a cup', FOOD_PROMPTS)
+        self.assertIn('apple', [r[0] for r in FRUITS])
+        self.assertIn('tea', [r[0] for r in DRINKS])
+        self.assertIn('pad_thai', [r[0] for r in THAI_DISHES])
+
+    def test_new_foods_can_be_accepted_without_bypassing_rejection(self):
+        keys = [row[0] for row in DISHES]
+        for key in ('apple', 'banana', 'tea', 'water', 'pad_thai', 'tom_yum'):
+            with self.subTest(key=key):
+                scores = self.scores()
+                scores[keys.index(key)] = 5.
+                self.assertEqual(decide(scores)[0], 'accepted')
+                scores[-1] = 6.
+                self.assertEqual(decide(scores)[0], 'non_food')
 
     def test_lanzhou_extension_keeps_pho_control_and_original_thresholds(self):
         self.assertIn('lanzhou_beef_noodles', [r[0] for r in DISHES])
