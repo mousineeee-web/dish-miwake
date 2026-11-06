@@ -53,13 +53,13 @@ def decide(logits, config=None):
                    'best_dish_logit': best, 'best_nonfood_logit': float(nonfood),
                    'best_other_food_logit': float(other)}
     if food_margin <= config['min_food_margin']:
-        return 'non_food', '料理写真と確認できませんでした。料理以外の画像の可能性があります。', diagnostics
+        return 'non_food', '食べ物・飲み物の写真と確認できませんでした。対象以外の画像の可能性があります。', diagnostics
     if best - other <= config['min_other_margin']:
-        return 'out_of_scope', '対象外の食品の可能性があるため、料理名を確定しません。', diagnostics
+        return 'out_of_scope', '対象外の食品の可能性があるため、名前を確定しません。', diagnostics
     if generic - best > config['max_generic_gap']:
-        return 'out_of_scope', f'料理の可能性はありますが、対象{len(DISHES)}種類では判断できませんでした。', diagnostics
+        return 'out_of_scope', f'食品の可能性はありますが、対象{len(DISHES)}種類では判断できませんでした。', diagnostics
     if best - second <= config['min_dish_margin']:
-        return 'uncertain', '複数の候補が近いため、料理名を確定できませんでした。', diagnostics
+        return 'uncertain', '複数の候補が近いため、名前を確定できませんでした。', diagnostics
     return 'accepted', f'対象{len(DISHES)}種類の中で比較した参考候補です。正解を保証するものではありません。', diagnostics
 
 

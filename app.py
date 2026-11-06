@@ -6,7 +6,8 @@ import threading
 import streamlit as st
 
 from classifier import MODEL_NAME, load_runtime
-from food_catalog import CATALOG_VERSION, DISHES, all_prompts
+from food_catalog import (CATALOG_VERSION, CATALOG_GROUPS, DISHES, DRINK_KEYS,
+                          all_prompts)
 from image_input import (MAX_FILE_SIZE, SUPPORTED_FORMAT_LABEL, ImageUploadError,
                          decode_uploaded_image)
 from open_set import CONFIG, FoodRecognizer
@@ -34,12 +35,15 @@ def get_inference_lock():
 st.set_page_config(page_title="料理みわけ", page_icon="🍽️", layout="centered")
 
 st.title("料理みわけ")
-st.write(f"{len(DISHES)}種類の料理候補を比較します。判断できない画像には、無理に料理名を付けません。")
-st.caption("寿司・ラーメン・蘭州牛肉麺・ピザなどの候補比較版です。画像を登録して追加学習する仕組みではありません。")
+st.write(f"{len(DISHES)}種類の食べ物・飲み物を比較します。曖昧な画像では、名前を無理に確定しません。")
+st.caption("料理に加えて、フルーツ・お茶や水などの飲み物・タイ料理に対応した候補比較版です。画像を登録して追加学習する仕組みではありません。")
+st.caption("候補の追加はモデルの追加学習ではありません。見た目が似た食品や透明な飲み物は取り違える場合があります。")
 st.caption("公開デモ：画像は実行サーバーへ送信して処理します。アプリは画像をファイル保存したり、追加学習や外部の画像認識APIへ送信したりしません。個人情報を含む写真はアップロードしないでください。")
 with st.expander(f"対象{len(DISHES)}種類と利用上の注意"):
-    st.write('・'.join(row[1] for row in DISHES))
-    st.info("すべての料理に対応するものではありません。料理以外・対象外・曖昧な画像の拒否を試みますが、誤認や見逃しは残ります。栄養・アレルギー・食べられるかは判断しません。")
+    for group, rows in CATALOG_GROUPS:
+        st.markdown(f"**{group}（{len(rows)}種類）**")
+        st.write('・'.join(row[1] for row in rows))
+    st.info("すべての食品に対応するものではありません。対象外・曖昧な画像の拒否を試みますが、誤認や見逃しは残ります。栄養・アレルギー・食材・飲食の安全性は判断しません。")
 
 with st.sidebar:
     st.subheader("推定条件")
@@ -50,7 +54,7 @@ with st.sidebar:
     st.caption(f"{CATALOG_VERSION}｜対象外・不確実な入力を保留する試作版")
 
 uploaded_file = st.file_uploader(
-    "料理画像を選択",
+    "食べ物・飲み物の写真を選択",
     type=None,  # Do not let a filename/MIME filter reject valid phone exports.
     max_upload_size=MAX_FILE_SIZE // (1024 * 1024),
     help=f"{SUPPORTED_FORMAT_LABEL}。20 MiB以下・5000万画素以下。拡張子ではなく実際の内容を確認します。",
@@ -75,9 +79,9 @@ else:
         if decoded.resized:
             st.caption("表示・推定用に縮小しました。端末内の元の写真は変更していません。")
         st.write(f"画像サイズ：{image.width} × {image.height} px")
-        st.caption(f"{len(DISHES)}種類の料理候補と、料理以外・範囲外の食品候補を比較します。scoreは正解確率ではありません。")
+        st.caption(f"{len(DISHES)}種類の候補と、非食品・範囲外の食品候補を比較します。scoreは正解確率ではありません。")
 
-        if st.button("料理名を推定", type="primary", width="stretch"):
+        if st.button("名前を推定", type="primary", width="stretch"):
             try:
                 with st.spinner("初回はモデルの読み込みに時間がかかります…"):
                     signature = hashlib.sha256(json.dumps([all_prompts('English'), all_prompts('日本語'), CONFIG], ensure_ascii=False).encode()).hexdigest()
@@ -89,14 +93,16 @@ else:
             else:
                 st.subheader("推定結果")
                 if result.decision == 'accepted':
-                    st.success(f"料理の候補：「{result.predictions[0].label}」")
+                    st.success(f"食べ物・飲み物の候補：「{result.predictions[0].label}」")
                     st.caption(result.reason)
+                    if result.predictions[0].key in DRINK_KEYS:
+                        st.warning("飲み物は見た目の候補です。写真だけでは透明な液体の中身・成分・糖分・温度・飲用の安全性を確認できません。")
                     for rank, prediction in enumerate(result.predictions[:3], 1):
                         st.progress(min(max(prediction.score, 0.0), 1.0),
                                     text=f"{rank}位　{prediction.label}　対応score {prediction.score:.3f}")
                 else:
                     st.warning("判定を保留しました：" + result.reason)
-                    st.info("料理を1品だけ大きく写した写真や、別の角度の写真を試してください。")
+                    st.info("食べ物・飲み物を1つだけ大きく写した写真や、別の角度の写真を試してください。")
                     if result.decision == 'uncertain' and result.predictions:
                         with st.expander("参考候補（確定結果ではありません）"):
                             for prediction in result.predictions[:3]:

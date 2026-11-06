@@ -1,8 +1,8 @@
 """Versioned dish candidates; adding a phrase does not train model weights."""
 
-CATALOG_VERSION = 'open31-v2'
+CATALOG_VERSION = 'open60-v3'
 # key, Japanese display label, English visual description, Commons search query
-DISHES = (
+ORIGINAL_DISHES = (
     ('sushi', '寿司', 'sushi', 'sushi plate'),
     ('ramen', 'ラーメン', 'ramen noodle soup', 'ramen bowl'),
     ('curry_rice', 'カレーライス', 'Japanese curry with rice', 'Japanese curry rice'),
@@ -36,16 +36,59 @@ DISHES = (
     ('lanzhou_beef_noodles', '蘭州牛肉麺', 'Chinese hand-pulled beef noodle soup', 'Lanzhou lamian'),
 )
 
+FRUITS = (
+    ('apple', 'りんご', 'an apple fruit', 'apple fruit'),
+    ('banana', 'バナナ', 'a banana fruit', 'banana fruit'),
+    ('orange', 'オレンジ', 'an orange citrus fruit', 'orange fruit'),
+    ('grapes', 'ぶどう', 'a bunch of grapes', 'grapes fruit'),
+    ('strawberry', 'いちご', 'strawberries', 'strawberries'),
+    ('watermelon', 'スイカ', 'a watermelon or slices of watermelon', 'watermelon slices'),
+    ('pineapple', 'パイナップル', 'a pineapple fruit', 'pineapple fruit'),
+    ('mango', 'マンゴー', 'a mango fruit or sliced mango', 'mango fruit'),
+    ('kiwi', 'キウイ', 'a kiwi fruit cut in half showing green flesh and black seeds', 'kiwi fruit'),
+    ('peach', '桃', 'a peach fruit', 'peach fruit'),
+    ('pear', '梨', 'a pear fruit', 'pear fruit'),
+    ('lemon', 'レモン', 'a lemon citrus fruit', 'lemon fruit'),
+)
+DRINKS = (
+    ('water', '水（見た目の候補）', 'a glass or a bottle of clear drinking water', 'glass water'),
+    ('tea', 'お茶（緑茶・紅茶など）', 'tea in a cup or a glass', 'cup tea'),
+    ('coffee', 'コーヒー', 'coffee in a cup or a glass', 'cup coffee'),
+    ('milk', '牛乳（見た目の候補）', 'a glass of white milk', 'glass milk'),
+    ('orange_juice', 'オレンジジュース', 'a glass of orange juice', 'glass orange juice'),
+    ('cola', 'コーラ', 'a glass of dark cola soda with bubbles', 'glass cola'),
+    ('bubble_tea', 'タピオカミルクティー', 'a cup of bubble milk tea with tapioca pearls', 'bubble milk tea'),
+    ('thai_iced_tea', 'タイミルクティー', 'Thai iced tea with orange colored milk tea and ice', 'Thai iced tea'),
+)
+THAI_DISHES = (
+    ('pad_thai', 'パッタイ', 'Thai pad thai stir fried rice noodles with bean sprouts and peanuts', 'pad thai'),
+    ('thai_green_curry', 'タイグリーンカレー', 'Thai green curry with coconut milk and vegetables', 'Thai green curry'),
+    ('thai_red_curry', 'タイレッドカレー', 'Thai red curry with coconut milk and vegetables', 'Thai red curry'),
+    ('tom_yum', 'トムヤムクン', 'Thai tom yum spicy sour shrimp soup', 'tom yum soup'),
+    ('tom_kha_gai', 'トムカーガイ', 'Thai tom kha gai white coconut chicken soup', 'tom kha gai'),
+    ('gaprao', 'ガパオライス', 'Thai pad krapow stir fried basil minced meat with rice and a fried egg', 'pad krapow rice'),
+    ('khao_man_gai', 'カオマンガイ', 'Thai khao man gai sliced poached chicken with rice and cucumber', 'khao man gai'),
+    ('som_tam', 'ソムタム', 'Thai som tam shredded green papaya salad', 'som tam papaya salad'),
+    ('mango_sticky_rice', 'マンゴースティッキーライス', 'Thai mango sticky rice dessert with coconut milk', 'mango sticky rice'),
+)
+
+# Keep the original 31 candidates, their order and descriptions unchanged.
+DISHES = ORIGINAL_DISHES + FRUITS + DRINKS + THAI_DISHES
+CATALOG_GROUPS = (('これまでの料理', ORIGINAL_DISHES), ('フルーツ', FRUITS),
+                  ('飲み物', DRINKS), ('タイ料理', THAI_DISHES))
+DRINK_KEYS = frozenset(row[0] for row in DRINKS)
+
 FOOD_PROMPTS = (
     'a photo of a prepared meal on a plate',
     'a photo of food in a bowl',
     'a photo of a dessert or a snack',
+    # These are now in-scope food groups, not evidence for out-of-scope rejection.
+    'a photo of fresh fruit',
+    'a photo of a drink in a glass or a cup',
 )
 OTHER_FOOD_PROMPTS = (
-    ('fruit', 'a photo of fresh fruit'),
     ('raw_vegetables', 'a photo of raw vegetables'),
     ('bread', 'a photo of a loaf of bread or a baguette'),
-    ('drink', 'a photo of a drink in a glass or a cup'),
     ('pancakes', 'a photo of breakfast pancakes or waffles'),
     ('paella', 'a photo of Spanish paella'),
     ('pho', 'a photo of Vietnamese pho noodle soup'),
