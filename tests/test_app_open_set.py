@@ -61,6 +61,22 @@ class AppOpenSetTest(unittest.TestCase):
         self.assertTrue(any(f'{len(DISHES)}種類' in node.value for node in app.markdown))
         self.assertTrue(any('追加学習する仕組みではありません' in node.value for node in app.caption))
 
+    def test_file_picker_and_preview_accept_real_heic_bytes(self):
+        output = io.BytesIO()
+        from image_input import open_uploaded_image
+        Image.linear_gradient('L').resize((64, 48)).convert('RGB').save(output, format='HEIF')
+        self.assertEqual(open_uploaded_image(output.getvalue()).size, (64, 48))
+        upload = Upload(output.getvalue())
+        upload.name = 'IMG_0001.HEIC'
+        with patch('streamlit.file_uploader', return_value=upload) as picker, \
+             patch('classifier.load_runtime') as load:
+            app = AppTest.from_file(str(APP)).run(timeout=20)
+        self.assertEqual(len(app.exception), 0)
+        self.assertTrue(any('読み込みました' in node.value for node in app.success))
+        self.assertIn('heic', picker.call_args.kwargs['type'])
+        self.assertIn('heif', picker.call_args.kwargs['type'])
+        load.assert_not_called()
+
     def test_corrupt_upload_is_rejected_before_runtime(self):
         with patch('streamlit.file_uploader', return_value=Upload(b'not an image')), \
              patch('classifier.load_runtime') as load:
