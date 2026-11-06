@@ -4,11 +4,10 @@ import logging
 import threading
 
 import streamlit as st
-from PIL import Image, UnidentifiedImageError
 
 from classifier import MODEL_NAME, load_runtime
 from food_catalog import CATALOG_VERSION, DISHES, all_prompts
-from image_input import MAX_FILE_SIZE, open_uploaded_image
+from image_input import MAX_FILE_SIZE, UPLOAD_EXTENSIONS, ImageUploadError, open_uploaded_image
 from open_set import CONFIG, FoodRecognizer
 
 
@@ -51,8 +50,8 @@ with st.sidebar:
 
 uploaded_file = st.file_uploader(
     "料理画像を選択",
-    type=["jpg", "jpeg", "png"],
-    help="JPGまたはPNG、10 MB以下・1200万画素以下の静止画を使用してください。",
+    type=list(UPLOAD_EXTENSIONS),
+    help="JPG・PNG・HEIC・HEIF、10 MB以下・2500万画素以下の写真を使用してください。HEIC/HEIFは自動で読み込みます。",
 )
 
 if uploaded_file is None:
@@ -62,8 +61,8 @@ elif uploaded_file.size > MAX_FILE_SIZE:
 else:
     try:
         image = open_uploaded_image(uploaded_file.getvalue())
-    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
-        st.error("画像を読み込めませんでした。10 MB以下・1200万画素以下のJPGまたはPNGの静止画を選んでください。")
+    except ImageUploadError as error:
+        st.error(str(error))
     else:
         st.image(image, caption=uploaded_file.name, width="stretch")
         st.success("画像を読み込みました。")
